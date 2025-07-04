@@ -8,6 +8,7 @@ import (
 	"short-news-bot/internal/initializers"
 	"short-news-bot/internal/models"
 
+	"gorm.io/gorm"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -15,11 +16,8 @@ func StartBotWork() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	// Create a new cancellable background context. Calling `cancel()` leads to the cancellation of the context
 	ctx := context.Background()
-	ctx, _ = context.WithCancel(ctx)
 
-	// `updates` is a golang channel which receives telegram updates
 	updates := initializers.BOT.GetUpdatesChan(u)
 
 	// Pass cancellable context to goroutine
@@ -49,20 +47,37 @@ func handleUpdate(update tgbotapi.Update) {
 
 func handleMessage(message *tgbotapi.Message) {
 	user_chat_id := message.Chat.ID
+	user_id := strconv.FormatInt(user_chat_id, 10)
 
 	user := models.User{}
+	user.User_ID = user_id
+	
+	err := initializers.DB.Where("user_id = ?", user_id).First(&user).Error
 
-	user.User_ID = strconv.FormatInt(user_chat_id, 10)
-
-	err := initializers.DB.Create(&user).Error
-	if err != nil {
-		log.Fatal("Error while creating new user")
+	if err == nil {
+		sendMessage(user_chat_id, "Вы уже есть в списке, ожидайте новостей")
+		return
 	}
 
-	msg := tgbotapi.NewMessage(user_chat_id, "Добавили вас в список, ожидайте новостей")
+	if err == gorm.ErrRecordNotFound {
+		user := models.User{User_ID: user_id}
+		err := initializers.DB.Create(&user).Error
 
-	_, err = initializers.BOT.Send(msg)
+		if err != nil {
+			log.Fatal("Error while creating new user: ", err.Error())
+		}
+
+		sendMessage(user_chat_id, "Добавили вас в список, ожидайте новостей")
+	} else {
+		log.Fatal("Error while checking user existence: ", err.Error())
+	}
+}
+
+func sendMessage(chatID int64, text string) {
+	msg := tgbotapi.NewMessage(chatID, text)
+	_, err := initializers.BOT.Send(msg)
+
 	if err != nil {
-		log.Fatal("Error while sending message")
+		log.Fatal("Error while sending message: ", err.Error())
 	}
 }
