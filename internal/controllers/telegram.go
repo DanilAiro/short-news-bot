@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"log"
 	"context"
 	"strconv"
 
@@ -41,13 +40,12 @@ func handleUpdate(update tgbotapi.Update) {
 	switch {
 		case update.Message != nil:
 			handleMessage(update.Message)
-			break
 	}
 }
 
 func handleMessage(message *tgbotapi.Message) {
 	user_chat_id := message.Chat.ID
-	user_id := strconv.FormatInt(user_chat_id, 10)
+	user_id := user_chat_id
 
 	user := models.User{}
 	user.User_ID = user_id
@@ -64,12 +62,12 @@ func handleMessage(message *tgbotapi.Message) {
 		err := initializers.DB.Create(&user).Error
 
 		if err != nil {
-			log.Fatal("Error while creating new user: ", err.Error())
+			initializers.Log.Fatal("Error while creating new user: ", err.Error())
 		}
 
 		sendMessage(user_chat_id, "Добавили вас в список, ожидайте новостей")
 	} else {
-		log.Fatal("Error while checking user existence: ", err.Error())
+		initializers.Log.Fatal("Error while checking user existence: ", err.Error())
 	}
 }
 
@@ -78,6 +76,33 @@ func sendMessage(chatID int64, text string) {
 	_, err := initializers.BOT.Send(msg)
 
 	if err != nil {
-		log.Fatal("Error while sending message: ", err.Error())
+		initializers.Log.Fatal("Error while sending message: ", err.Error())
+	}
+}
+
+func EveryDaySender() {
+	UpdateCurrencies()
+
+	var text string
+
+	if len(AllCurrencies) > 0 {
+		text += "Курсы валют:\n"
+
+		for k, v := range AllCurrencies {
+			text += k + " - " + strconv.FormatFloat(v, 'f', 0, 64) + " RUB\n"
+		}
+
+		text += "\n"
+	}
+
+	users := []models.User{}
+	initializers.DB.Find(&users)
+
+	if len(users) > 0 {
+		for _, v := range users {
+			sendMessage(v.User_ID, text)
+		}
+
+		return
 	}
 }
