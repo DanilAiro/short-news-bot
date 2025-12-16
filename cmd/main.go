@@ -23,8 +23,11 @@ func main() {
 	controllers.UpdateCurrencies()
 	controllers.StartBotWork()
 
-	// Каждый день в 22:00
-    initializers.AddCronJob("0 22 * * *", controllers.EveryDaySender)
+	// Каждый день в 19:00
+	// initializers.AddCronJob("* 19 * * *", controllers.EveryDaySender)
+
+	// Каждую минуту
+	initializers.AddCronJob("* * * * *", controllers.EveryDaySender)
 
 	initializers.Log.Println("Бот запущен! Нажмите ctrl + c для выхода")
 	sc := make(chan os.Signal, 1)

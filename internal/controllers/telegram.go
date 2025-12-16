@@ -89,7 +89,7 @@ func EveryDaySender() {
 		text += "Курсы валют:\n"
 
 		for k, v := range AllCurrencies {
-			text += k + " - " + strconv.FormatFloat(v, 'f', 0, 64) + " RUB\n"
+			text += k + " - " + strconv.FormatFloat(v, 'f', 3, 64) + " RUB\n"
 		}
 
 		text += "\n"
